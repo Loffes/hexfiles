@@ -1,0 +1,2095 @@
+ESX                           = nil
+
+Citizen.CreateThread(function ()
+    while ESX == nil do
+        TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+        Citizen.Wait(0)
+    end
+end)
+
+local selectedPlayer
+local spectating = false
+
+local selfVehiclegun = false
+local selfInvisible = false
+local selfCrosshair = false
+local SelfGodmode = true
+local everyoneRape = false
+local safe = true
+local selfAimbot = false
+local selfTrace = false
+local selfRemoveAttached = false
+local selfExplosiveHands = false
+local selfInfiniteAmmo = true
+local selfSuperPunch = false
+local selfNoFall = false
+local vehicleGodMode = false
+local allVehiclesRainbowPride = false
+local vehicleRainbowPride = false
+local vehicleNumberPlate = false
+local oneHit = false
+local currentAmmoType = 1
+local selfAimassist = false
+local selfRagebot = false
+local selfNoclip = false
+local rapePeds = {}
+local spawnedProps = {}
+local friends = {}
+
+local allWeapons = {
+	"WEAPON_KNIFE",
+	"WEAPON_MINIGUN",
+	"WEAPON_KNUCKLE",
+	"WEAPON_NIGHTSTICK",
+	"WEAPON_HAMMER",
+	"WEAPON_BAT",
+	"WEAPON_GOLFCLUB",
+	"WEAPON_CROWBAR",
+	"WEAPON_BOTTLE",
+	"WEAPON_DAGGER",
+	"WEAPON_HATCHET",
+	"WEAPON_MACHETE",
+	"WEAPON_FLASHLIGHT",
+	"WEAPON_SWITCHBLADE",
+	"WEAPON_PISTOL",
+	"WEAPON_PISTOL_MK2",
+	"WEAPON_COMBATPISTOL",
+	"WEAPON_APPISTOL",
+	"WEAPON_PISTOL50",
+	"WEAPON_SNSPISTOL",
+	"WEAPON_HEAVYPISTOL",
+	"WEAPON_VINTAGEPISTOL",
+	"WEAPON_STUNGUN",
+	"WEAPON_FLAREGUN",
+	"WEAPON_MARKSMANPISTOL",
+	"WEAPON_REVOLVER",
+	"WEAPON_MICROSMG",
+	"WEAPON_SMG",
+	"WEAPON_SMG_MK2",
+	"WEAPON_ASSAULTSMG",
+	"WEAPON_MG",
+	"WEAPON_COMBATMG",
+	"WEAPON_COMBATMG_MK2",
+	"WEAPON_COMBATPDW",
+	"WEAPON_GUSENBERG",
+	"WEAPON_MACHINEPISTOL",
+	"WEAPON_ASSAULTRIFLE",
+	"WEAPON_ASSAULTRIFLE_MK2",
+	"WEAPON_CARBINERIFLE",
+	"WEAPON_CARBINERIFLE_MK2",
+	"WEAPON_ADVANCEDRIFLE",
+	"WEAPON_SPECIALCARBINE",
+	"WEAPON_BULLPUPRIFLE",
+	"WEAPON_COMPACTRIFLE",
+	"WEAPON_PUMPSHOTGUN",
+	"WEAPON_SAWNOFFSHOTGUN",
+	"WEAPON_BULLPUPSHOTGUN",
+	"WEAPON_ASSAULTSHOTGUN",
+	"WEAPON_MUSKET",
+	"WEAPON_HEAVYSHOTGUN",
+	"WEAPON_DBSHOTGUN",
+	"WEAPON_SNIPERRIFLE",
+	"WEAPON_HEAVYSNIPER",
+	"WEAPON_HEAVYSNIPER_MK2",
+	"WEAPON_MARKSMANRIFLE",
+	"WEAPON_GRENADELAUNCHER",
+	"WEAPON_GRENADELAUNCHER_SMOKE",
+	"WEAPON_RPG",
+	"WEAPON_STINGER",
+	"WEAPON_FIREWORK",
+	"WEAPON_HOMINGLAUNCHER",
+	"WEAPON_GRENADE",
+	"WEAPON_STICKYBOMB",
+	"WEAPON_PROXMINE",
+	"WEAPON_BZGAS",
+	"WEAPON_SMOKEGRENADE",
+	"WEAPON_MOLOTOV",
+	"WEAPON_FIREEXTINGUISHER",
+	"WEAPON_PETROLCAN",
+	"WEAPON_SNOWBALL",
+	"WEAPON_FLARE",
+	"WEAPON_BALL"
+}
+
+local ammoTypes = {
+	'inget',
+	'explosivt',
+	'eld',
+}
+
+local aimbotWhitelisted = {}
+
+local vehicleGunVehicles = {
+	'cargoplane', 'jet', 'blimp', 'hydra', 'rhino'
+}
+
+local vehicles = {
+	'kuruma2', 't20', 'police', 'hakuchou2', 'caddy2'
+}
+
+local players = {}
+
+Citizen.CreateThread(function()
+	while true do
+		players = {}
+		for i = 0, 256 do
+			if NetworkIsPlayerActive(i) then
+				if GetPlayerServerId(i) then
+					if safe then
+						if GetPlayerServerId(i) ~= GetPlayerServerId(PlayerId()) then
+							local friend = false
+							for x = 1, #friends do
+								if friends[x].id == GetPlayerServerId(i) then
+									friend = true
+								end
+							end
+							if not friend then 
+								table.insert(players, {Name = GetPlayerName(i), Id = GetPlayerServerId(i)})
+							end
+						end
+					else
+						table.insert(players, {Name = GetPlayerName(i), Id = GetPlayerServerId(i)})
+					end
+				end
+			end
+		end
+		Wait(1000)
+	end
+end)
+
+local props = {
+	{name = 'Parisehjul', object = 'prop_ld_ferris_wheel'},
+	{name = 'Sprängd buss', object = 'prop_rub_buswreck_06'},
+	{name = 'Lastpall med weed', object = 'hei_prop_heist_weed_pallet_02'},
+	{name = 'Weedplanta', object = 'prop_weed_01'},
+	{name = 'Byggnadsställning', object = 'des_scaffolding_root'},
+	{name = 'Container', object = 'prop_container_ld2'}
+}
+
+Menu = { }
+
+Menu.debug = false
+
+
+local menus = { }
+local keys = { up = 172, down = 173, left = 174, right = 175, select = 176, back = 177 }
+local optionCount = 0
+
+local currentKey = nil
+local currentMenu = nil
+
+local titleHeight = 0.11
+local titleYOffset = 0.03
+local titleScale = 1.0
+
+local buttonHeight = 0.038
+local buttonFont = 0
+local buttonScale = 0.365
+local buttonTextXOffset = 0.005
+local buttonTextYOffset = 0.005
+
+
+local function debugPrint(text)
+	if Menu.debug then
+		Citizen.Trace('[Menu] '..tostring(text))
+	end
+end
+
+
+local function setMenuProperty(id, property, value)
+	if id and menus[id] then
+		menus[id][property] = value
+		debugPrint(id..' menu property changed: { '..tostring(property)..', '..tostring(value)..' }')
+	end
+end
+
+
+local function isMenuVisible(id)
+	if id and menus[id] then
+		return menus[id].visible
+	else
+		return false
+	end
+end
+
+
+local function setMenuVisible(id, visible, holdCurrent)
+	if id and menus[id] then
+		setMenuProperty(id, 'visible', visible)
+
+		if not holdCurrent and menus[id] then
+			setMenuProperty(id, 'currentOption', 1)
+		end
+
+		if visible then
+			if id ~= currentMenu and isMenuVisible(currentMenu) then
+				setMenuVisible(currentMenu, false)
+			end
+
+			currentMenu = id
+		end
+	end
+end
+
+
+local function drawText(text, x, y, font, color, scale, center, shadow, alignRight)
+	SetTextColour(color.r, color.g, color.b, color.a)
+	SetTextFont(font)
+	SetTextScale(scale, scale)
+
+	if shadow then
+		SetTextDropShadow(2, 2, 0, 0, 0)
+	end
+
+	if menus[currentMenu] then
+		if center then
+			SetTextCentre(center)
+		elseif alignRight then
+			SetTextWrap(menus[currentMenu].x, menus[currentMenu].x + menus[currentMenu].width - buttonTextXOffset)
+			SetTextRightJustify(true)
+		end
+	end
+
+	SetTextEntry("STRING")
+	AddTextComponentString(text)
+	DrawText(x, y)
+end
+
+
+local function drawRect(x, y, width, height, color)
+	DrawRect(x, y, width, height, color.r, color.g, color.b, color.a)
+end
+
+
+local function drawTitle()
+	if menus[currentMenu] then
+		local x = menus[currentMenu].x + menus[currentMenu].width / 2
+		local y = menus[currentMenu].y + titleHeight / 2
+
+		if menus[currentMenu].titleBackgroundSprite then
+			DrawSprite(menus[currentMenu].titleBackgroundSprite.dict, menus[currentMenu].titleBackgroundSprite.name, x, y, menus[currentMenu].width, titleHeight, 0., 255, 255, 255, 255)
+		else
+			drawRect(x, y, menus[currentMenu].width, titleHeight, menus[currentMenu].titleBackgroundColor)
+		end
+
+		drawText(menus[currentMenu].title, x, y - titleHeight / 2 + titleYOffset, menus[currentMenu].titleFont, menus[currentMenu].titleColor, titleScale, true)
+	end
+end
+
+
+local function drawSubTitle()
+	if menus[currentMenu] then
+		local x = menus[currentMenu].x + menus[currentMenu].width / 2
+		local y = menus[currentMenu].y + titleHeight + buttonHeight / 2
+
+		local subTitleColor = { r = menus[currentMenu].titleBackgroundColor.r, g = menus[currentMenu].titleBackgroundColor.g, b = menus[currentMenu].titleBackgroundColor.b, a = 255 }
+
+		drawRect(x, y, menus[currentMenu].width, buttonHeight, menus[currentMenu].subTitleBackgroundColor)
+		drawText(menus[currentMenu].subTitle, menus[currentMenu].x + buttonTextXOffset, y - buttonHeight / 2 + buttonTextYOffset, buttonFont, subTitleColor, buttonScale, false)
+
+		if optionCount > menus[currentMenu].maxOptionCount then
+			drawText(tostring(menus[currentMenu].currentOption)..' / '..tostring(optionCount), menus[currentMenu].x + menus[currentMenu].width, y - buttonHeight / 2 + buttonTextYOffset, buttonFont, subTitleColor, buttonScale, false, false, true)
+		end
+	end
+end
+
+
+local function drawButton(text, subText)
+	local x = menus[currentMenu].x + menus[currentMenu].width / 2
+	local multiplier = nil
+
+	if menus[currentMenu].currentOption <= menus[currentMenu].maxOptionCount and optionCount <= menus[currentMenu].maxOptionCount then
+		multiplier = optionCount
+	elseif optionCount > menus[currentMenu].currentOption - menus[currentMenu].maxOptionCount and optionCount <= menus[currentMenu].currentOption then
+		multiplier = optionCount - (menus[currentMenu].currentOption - menus[currentMenu].maxOptionCount)
+	end
+
+	if multiplier then
+		local y = menus[currentMenu].y + titleHeight + buttonHeight + (buttonHeight * multiplier) - buttonHeight / 2
+		local backgroundColor = nil
+		local textColor = nil
+		local subTextColor = nil
+		local shadow = false
+
+		if menus[currentMenu].currentOption == optionCount then
+			backgroundColor = menus[currentMenu].menuFocusBackgroundColor
+			textColor = menus[currentMenu].menuFocusTextColor
+			subTextColor = menus[currentMenu].menuFocusTextColor
+		else
+			backgroundColor = menus[currentMenu].menuBackgroundColor
+			textColor = menus[currentMenu].menuTextColor
+			subTextColor = menus[currentMenu].menuSubTextColor
+			shadow = true
+		end
+
+		drawRect(x, y, menus[currentMenu].width, buttonHeight, backgroundColor)
+		drawText(text, menus[currentMenu].x + buttonTextXOffset, y - (buttonHeight / 2) + buttonTextYOffset, buttonFont, textColor, buttonScale, false, shadow)
+
+		if subText then
+			drawText(subText, menus[currentMenu].x + buttonTextXOffset, y - buttonHeight / 2 + buttonTextYOffset, buttonFont, subTextColor, buttonScale, false, shadow, true)
+		end
+	end
+end
+
+
+function Menu.CreateMenu(id, title)
+	-- Default settings
+	menus[id] = { }
+	menus[id].title = title
+	menus[id].subTitle = 'INTERACTION MENU'
+
+	menus[id].visible = false
+
+	menus[id].previousMenu = nil
+
+	menus[id].aboutToBeClosed = false
+
+	menus[id].x = 0.0175
+	menus[id].y = 0.025
+	menus[id].width = 0.23
+
+	menus[id].currentOption = 1
+	menus[id].maxOptionCount = 10
+
+	menus[id].titleFont = 2
+	menus[id].titleColor = { r = 255, g = 255, b = 255, a = 255 }
+	menus[id].titleBackgroundColor = { r = 0, g = 0, b = 0, a = 255 }
+	menus[id].titleBackgroundSprite = nil
+
+	menus[id].menuTextColor = { r = 255, g = 255, b = 255, a = 255 }
+	menus[id].menuSubTextColor = { r = 189, g = 189, b = 189, a = 255 }
+	menus[id].menuFocusTextColor = { r = 0, g = 0, b = 0, a = 255 }
+	menus[id].menuFocusBackgroundColor = { r = 245, g = 245, b = 245, a = 255 }
+	menus[id].menuBackgroundColor = { r = 0, g = 0, b = 0, a = 160 }
+
+	menus[id].subTitleBackgroundColor = { r = menus[id].menuBackgroundColor.r, g = menus[id].menuBackgroundColor.g, b = menus[id].menuBackgroundColor.b, a = 255 }
+
+	menus[id].buttonPressedSound = { name = "SELECT", set = "HUD_FRONTEND_DEFAULT_SOUNDSET" } --https://pastebin.com/0neZdsZ5
+
+	debugPrint(tostring(id)..' menu created')
+end
+
+
+function Menu.CreateSubMenu(id, parent, subTitle)
+	if menus[parent] then
+		Menu.CreateMenu(id, menus[parent].title)
+
+		if subTitle then
+			setMenuProperty(id, 'subTitle', string.upper(subTitle))
+		else
+			setMenuProperty(id, 'subTitle', string.upper(menus[parent].subTitle))
+		end
+
+		setMenuProperty(id, 'previousMenu', parent)
+
+		setMenuProperty(id, 'x', menus[parent].x)
+		setMenuProperty(id, 'y', menus[parent].y)
+		setMenuProperty(id, 'maxOptionCount', menus[parent].maxOptionCount)
+		setMenuProperty(id, 'titleFont', menus[parent].titleFont)
+		setMenuProperty(id, 'titleColor', menus[parent].titleColor)
+		setMenuProperty(id, 'titleBackgroundColor', menus[parent].titleBackgroundColor)
+		setMenuProperty(id, 'titleBackgroundSprite', menus[parent].titleBackgroundSprite)
+		setMenuProperty(id, 'menuTextColor', menus[parent].menuTextColor)
+		setMenuProperty(id, 'menuSubTextColor', menus[parent].menuSubTextColor)
+		setMenuProperty(id, 'menuFocusTextColor', menus[parent].menuFocusTextColor)
+		setMenuProperty(id, 'menuFocusBackgroundColor', menus[parent].menuFocusBackgroundColor)
+		setMenuProperty(id, 'menuBackgroundColor', menus[parent].menuBackgroundColor)
+		setMenuProperty(id, 'subTitleBackgroundColor', menus[parent].subTitleBackgroundColor)
+	else
+		debugPrint('Failed to create '..tostring(id)..' submenu: '..tostring(parent)..' parent menu doesn\'t exist')
+	end
+end
+
+
+function Menu.CurrentMenu()
+	return currentMenu
+end
+
+
+function Menu.OpenMenu(id)
+	if id and menus[id] then
+		PlaySoundFrontend(-1, "SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+		setMenuVisible(id, true)
+		debugPrint(tostring(id)..' menu opened')
+	else
+		debugPrint('Failed to open '..tostring(id)..' menu: it doesn\'t exist')
+	end
+end
+
+
+function Menu.IsMenuOpened(id)
+	return isMenuVisible(id)
+end
+
+
+function Menu.IsAnyMenuOpened()
+	for id, _ in pairs(menus) do
+		if isMenuVisible(id) then return true end
+	end
+
+	return false
+end
+
+
+function Menu.IsMenuAboutToBeClosed()
+	if menus[currentMenu] then
+		return menus[currentMenu].aboutToBeClosed
+	else
+		return false
+	end
+end
+
+
+function Menu.CloseMenu()
+	if menus[currentMenu] then
+		if menus[currentMenu].aboutToBeClosed then
+			menus[currentMenu].aboutToBeClosed = false
+			setMenuVisible(currentMenu, false)
+			debugPrint(tostring(currentMenu)..' menu closed')
+			PlaySoundFrontend(-1, "QUIT", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+			optionCount = 0
+			currentMenu = nil
+			currentKey = nil
+		else
+			menus[currentMenu].aboutToBeClosed = true
+			debugPrint(tostring(currentMenu)..' menu about to be closed')
+		end
+	end
+end
+
+
+function Menu.Button(text, subText)
+	local buttonText = text
+	if subText then
+		buttonText = '{ '..tostring(buttonText)..', '..tostring(subText)..' }'
+	end
+
+	if menus[currentMenu] then
+		optionCount = optionCount + 1
+
+		local isCurrent = menus[currentMenu].currentOption == optionCount
+
+		drawButton(text, subText)
+
+		if isCurrent then
+			if currentKey == keys.select then
+				PlaySoundFrontend(-1, menus[currentMenu].buttonPressedSound.name, menus[currentMenu].buttonPressedSound.set, true)
+				debugPrint(buttonText..' button pressed')
+				return true
+			elseif currentKey == keys.left or currentKey == keys.right then
+				PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+			end
+		end
+
+		return false
+	else
+		debugPrint('Failed to create '..buttonText..' button: '..tostring(currentMenu)..' menu doesn\'t exist')
+
+		return false
+	end
+end
+
+
+function Menu.MenuButton(text, id)
+	if menus[id] then
+		if Menu.Button(text) then
+			setMenuVisible(currentMenu, false)
+			setMenuVisible(id, true, true)
+
+			return true
+		end
+	else
+		debugPrint('Failed to create '..tostring(text)..' menu button: '..tostring(id)..' submenu doesn\'t exist')
+	end
+
+	return false
+end
+
+
+function Menu.CheckBox(text, checked, callback)
+	if Menu.Button(text, checked and 'On' or 'Off') then
+		checked = not checked
+		debugPrint(tostring(text)..' checkbox changed to '..tostring(checked))
+		if callback then callback(checked) end
+
+		return true
+	end
+
+	return false
+end
+
+
+function Menu.ComboBox(text, items, currentIndex, selectedIndex, callback)
+	local itemsCount = #items
+	local selectedItem = items[currentIndex]
+	local isCurrent = menus[currentMenu].currentOption == (optionCount + 1)
+
+	if itemsCount > 1 and isCurrent then
+		selectedItem = '← '..tostring(selectedItem)..' →'
+	end
+	if Menu.Button(text, selectedItem) then
+		selectedIndex = currentIndex
+		callback(currentIndex, selectedIndex)
+		return true
+	elseif isCurrent then
+		if currentKey == keys.left then
+			if currentIndex > 1 then currentIndex = currentIndex - 1 else currentIndex = itemsCount end
+		elseif currentKey == keys.right then
+			if currentIndex < itemsCount then currentIndex = currentIndex + 1 else currentIndex = 1 end
+		end
+	else
+		currentIndex = selectedIndex
+	end
+
+	callback(currentIndex, selectedIndex)
+	return false
+end
+
+
+function Menu.Display()
+	if isMenuVisible(currentMenu) then
+		if menus[currentMenu].aboutToBeClosed then
+			Menu.CloseMenu()
+		else
+			ClearAllHelpMessages()
+
+			drawTitle()
+			drawSubTitle()
+
+			currentKey = nil
+
+			if IsDisabledControlJustReleased(1, keys.down) then
+				PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+
+				if menus[currentMenu].currentOption < optionCount then
+					menus[currentMenu].currentOption = menus[currentMenu].currentOption + 1
+				else
+					menus[currentMenu].currentOption = 1
+				end
+			elseif IsDisabledControlJustReleased(1, keys.up) then
+				PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+
+				if menus[currentMenu].currentOption > 1 then
+					menus[currentMenu].currentOption = menus[currentMenu].currentOption - 1
+				else
+					menus[currentMenu].currentOption = optionCount
+				end
+			elseif IsDisabledControlJustReleased(1, keys.left) then
+				currentKey = keys.left
+			elseif IsDisabledControlJustReleased(1, keys.right) then
+				currentKey = keys.right
+			elseif IsDisabledControlJustReleased(1, keys.select) then
+				currentKey = keys.select
+			elseif IsDisabledControlJustReleased(1, keys.back) then
+				if menus[menus[currentMenu].previousMenu] then
+					PlaySoundFrontend(-1, "BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+					setMenuVisible(menus[currentMenu].previousMenu, true)
+				else
+					Menu.CloseMenu()
+				end
+			end
+
+			optionCount = 0
+		end
+	end
+end
+
+
+function Menu.SetMenuWidth(id, width)
+	setMenuProperty(id, 'width', width)
+end
+
+
+function Menu.SetMenuX(id, x)
+	setMenuProperty(id, 'x', x)
+end
+
+
+function Menu.SetMenuY(id, y)
+	setMenuProperty(id, 'y', y)
+end
+
+
+function Menu.SetMenuMaxOptionCountOnScreen(id, count)
+	setMenuProperty(id, 'maxOptionCount', count)
+end
+
+
+function Menu.SetTitle(id, title)
+	setMenuProperty(id, 'title', title)
+end
+
+
+function Menu.SetTitleColor(id, r, g, b, a)
+	setMenuProperty(id, 'titleColor', { ['r'] = r, ['g'] = g, ['b'] = b, ['a'] = a or menus[id].titleColor.a })
+end
+ 
+ 
+function Menu.SetTitleBackgroundColor(id, r, g, b, a)
+	setMenuProperty(id, 'titleBackgroundColor', { ['r'] = r, ['g'] = g, ['b'] = b, ['a'] = a or menus[id].titleBackgroundColor.a })
+end
+
+
+function Menu.SetTitleBackgroundSprite(id, textureDict, textureName)
+	RequestStreamedTextureDict(textureDict)
+	setMenuProperty(id, 'titleBackgroundSprite', { dict = textureDict, name = textureName })
+end
+
+
+function Menu.SetSubTitle(id, text)
+	setMenuProperty(id, 'subTitle', string.upper(text))
+end
+
+
+function Menu.SetMenuBackgroundColor(id, r, g, b, a)
+	setMenuProperty(id, 'menuBackgroundColor', { ['r'] = r, ['g'] = g, ['b'] = b, ['a'] = a or menus[id].menuBackgroundColor.a })
+end
+
+
+function Menu.SetMenuTextColor(id, r, g, b, a)
+	setMenuProperty(id, 'menuTextColor', { ['r'] = r, ['g'] = g, ['b'] = b, ['a'] = a or menus[id].menuTextColor.a })
+end
+
+function Menu.SetMenuSubTextColor(id, r, g, b, a)
+	setMenuProperty(id, 'menuSubTextColor', { ['r'] = r, ['g'] = g, ['b'] = b, ['a'] = a or menus[id].menuSubTextColor.a })
+end
+
+function Menu.SetMenuFocusColor(id, r, g, b, a)
+	setMenuProperty(id, 'menuFocusColor', { ['r'] = r, ['g'] = g, ['b'] = b, ['a'] = a or menus[id].menuFocusColor.a })
+end
+
+
+function Menu.SetMenuButtonPressedSound(id, name, set)
+	setMenuProperty(id, 'buttonPressedSound', { ['name'] = name, ['set'] = set })
+end
+
+KLF = {}
+KLF.RegisteredMenus = {}
+KLF.RegisteredSubMenus = {}
+
+KLF.RegisterMenu = function(menuName, data)
+    for i = 1, #KLF.RegisteredMenus do
+        if KLF.RegisteredMenus[i].menu == menuName then
+            return
+        end
+    end
+    table.insert(KLF.RegisteredMenus, {menu = menuName, items = data})
+    Menu.CreateMenu(menuName, menuName)
+    Menu.SetSubTitle(menuName, menuName)
+end
+
+KLF.RegisterSubMenu = function(menu, parent, title, data)
+    for i = 1, #KLF.RegisteredSubMenus do
+        if KLF.RegisteredSubMenus[i].menu == menu then
+            return
+        end
+	end
+    table.insert(KLF.RegisteredSubMenus, {menu = menu, parent = parent, items = data})
+    Menu.CreateSubMenu(menu, parent, title)
+    Menu.SetSubTitle(title, title)
+end
+
+Citizen.CreateThread(function()
+	while true do
+        for i = 1, #KLF.RegisteredMenus do
+            if Menu.IsMenuOpened(KLF.RegisteredMenus[i].menu) then
+                local itemValues = {}
+                for j = 1, #KLF.RegisteredMenus[i].items do
+					if KLF.RegisteredMenus[i].items[j].type == 'combobox' then
+                        table.insert(itemValues, {menuitem = KLF.RegisteredMenus[i].items[j], current = 1, selected = 1})
+                    end
+                end
+                while Menu.IsMenuOpened(KLF.RegisteredMenus[i].menu) do
+                    for k, v in pairs(KLF.RegisteredMenus[i].items) do
+                        if v.type == 'button' then
+                            if Menu.Button(v.text) then
+                                if v['cbType'] then
+                                    v.cb(v['cbType'])
+                                else
+                                    v.cb()
+                                end
+                            end
+                        elseif v.type == 'combobox' then
+                            for j = 1, #itemValues do
+                                if itemValues[j].menuitem == v then
+                                    if Menu.ComboBox(v.text, v.items, itemValues[j].current, itemValues[j].selected, function(current, selected)
+                                            if itemValues[j].selected ~= selected then
+                                                if v['cbType'] then
+                                                    v.cb(current, v['cbType'])
+                                                else
+                                                    v.cb(current)
+                                                end
+                                            end
+                                            itemValues[j].current = current
+                                            itemValues[j].selected = selected
+                                        end) then
+                                    end
+                                end
+							end
+                        elseif v.type == 'submenu' then
+                            if Menu.MenuButton(v.text, v.menu) then
+                            end
+                        end
+                    end
+                    Menu.Display()
+                    Wait(0)
+                end
+            end
+        end
+        for i = 1, #KLF.RegisteredSubMenus do
+            if Menu.IsMenuOpened(KLF.RegisteredSubMenus[i].menu) then
+				local itemValues = {}
+				for j = 1, #KLF.RegisteredSubMenus[i].items do
+					if KLF.RegisteredSubMenus[i].items[j].type == 'combobox' then
+						table.insert(itemValues, {menuitem = KLF.RegisteredSubMenus[i].items[j], current = 1, selected = 1})
+                    end
+                end
+                while Menu.IsMenuOpened(KLF.RegisteredSubMenus[i].menu) do
+                    for k, v in pairs(KLF.RegisteredSubMenus[i].items) do
+                        if v.type == 'submenu' then
+                            if Menu.MenuButton(v.text, v.menu) then
+                            end
+                        elseif v.type == 'button' then
+                            if Menu.Button(v.text) then
+                                if v['cbType'] then
+                                    v.cb(v['cbType'])
+                                else
+                                    v.cb()
+                                end
+                            end
+                        elseif v.type == 'combobox' then
+                            for j = 1, #itemValues do
+								if itemValues[j].menuitem == v then
+									if Menu.ComboBox(v.text, v.items, itemValues[j].current, itemValues[j].selected, function(current, selected)
+                                            if itemValues[j].selected ~= selected then
+                                                if v['cbType'] then
+                                                    v.cb(current, v['cbType'])
+                                                else
+                                                    v.cb(current)
+                                                end
+                                            end
+                                            itemValues[j].current = current
+                                            itemValues[j].selected = selected
+                                        end) then
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    if Menu.MenuButton('Gå tillbaka', KLF.RegisteredSubMenus[i].parent) then -- stäng menyn
+                    end
+                    Menu.Display()
+                    Wait(0)
+                end
+            end
+        end
+        Wait(50)
+    end
+end)
+
+local mainmenuname = 'RDM Grabbarna'
+local settings = {
+	godmode = false,
+	explosivepunch = false,
+
+}
+
+function RGBRainbow(frequency)
+	local result = {}
+	local curtime = GetGameTimer() / 1000
+
+	result.r = math.floor(math.sin(curtime * frequency + 0) * 127 + 128)
+	result.g = math.floor(math.sin(curtime * frequency + 2) * 127 + 128)
+	result.b = math.floor(math.sin(curtime * frequency + 4) * 127 + 128)
+
+	return result
+end
+
+Citizen.CreateThread(function()
+
+    local data = {}
+    local clothingData = {}
+	local outfits = {
+		{name = 'Ed Shääran', clothes = json.decode('{"pants_2":0,"moles_1":0,"eyebrows_2":0,"mask_1":0,"blush_3":0,"eye_color":0,"decals_2":0,"chest_1":0,"chain_2":0,"makeup_3":0,"skin":0,"watches_1":-1,"makeup_4":0,"blemishes_2":0,"sex":0,"bproof_2":0,"lipstick_2":0,"complexion_1":0,"moles_2":0,"blush_2":0,"ears_1":-1,"eyebrows_4":0,"bags_1":0,"shoes_1":12,"makeup_1":0,"face":23,"decals_1":0,"helmet_1":7,"bproof_1":0,"bodyb_2":0,"chain_1":0,"torso_2":1,"bags_2":0,"watches_2":0,"shoes_2":0,"lipstick_4":0,"age_2":0,"hair_1":12,"eyebrows_3":0,"tshirt_2":0,"arms":11,"bodyb_1":0,"glasses_2":0,"blemishes_1":0,"chest_2":0,"tshirt_1":15,"beard_1":18,"eyebrows_1":0,"sun_1":0,"mask_2":0,"lipstick_1":0,"hair_color_1":24,"hair_2":0,"lipstick_3":0,"age_1":0,"helmet_2":6,"glasses_1":0,"makeup_2":0,"sun_2":0,"hair_color_2":0,"chest_3":0,"complexion_2":0,"beard_3":18,"beard_4":0,"blush_1":0,"bracelets_2":0,"bracelets_1":-1,"ears_2":0,"beard_2":10,"pants_1":9,"arms_2":0,"torso_1":26}')},
+		{name = 'Autismflinten', clothes = json.decode('{"mask_1":0,"moles_2":0,"bodyb_2":0,"blemishes_2":0,"blush_1":0,"age_2":0,"bracelets_2":0,"bproof_2":0,"tshirt_1":15,"bracelets_1":-1,"ears_1":-1,"blush_3":0,"bproof_1":0,"blush_2":0,"complexion_2":0,"torso_1":17,"beard_4":0,"sun_2":0,"helmet_2":0,"shoes_1":16,"eyebrows_1":0,"face":9,"watches_1":-1,"beard_2":0,"eyebrows_2":0,"eyebrows_3":0,"pants_1":18,"chest_3":46,"chain_1":123,"sex":0,"blemishes_1":0,"hair_color_1":46,"lipstick_4":0,"mask_2":0,"age_1":0,"pants_2":0,"glasses_1":1,"shoes_2":8,"bags_2":0,"makeup_1":50,"arms":67,"chain_2":0,"chest_2":10,"decals_2":0,"hair_color_2":0,"hair_2":0,"hair_1":34,"arms_2":0,"bags_1":0,"tshirt_2":0,"beard_1":0,"skin":0,"lipstick_1":0,"lipstick_2":10,"bodyb_1":0,"makeup_4":0,"decals_1":0,"makeup_2":10,"eye_color":26,"ears_2":0,"chest_1":4,"glasses_2":1,"moles_1":0,"complexion_1":0,"sun_1":0,"makeup_3":0,"eyebrows_4":0,"watches_2":0,"beard_3":0,"helmet_1":-1,"lipstick_3":0,"torso_2":1}')},
+		{name = 'Kempa', clothes = json.decode('{"chest_1":0,"arms":0,"bracelets_1":-1,"chest_2":0,"chain_1":0,"lipstick_3":0,"decals_2":0,"age_1":0,"face":7,"blush_2":0,"shoes_1":1,"bodyb_1":0,"blush_3":0,"blush_1":0,"hair_1":7,"hair_color_2":0,"ears_2":0,"lipstick_1":0,"beard_3":0,"complexion_2":0,"chain_2":0,"sex":0,"eyebrows_2":10,"pants_1":6,"bracelets_2":0,"blemishes_2":0,"decals_1":0,"torso_2":0,"chest_3":0,"mask_2":0,"helmet_2":0,"bodyb_2":0,"makeup_2":0,"eyebrows_4":0,"hair_color_1":11,"age_2":0,"eye_color":0,"eyebrows_3":0,"bags_2":0,"beard_1":10,"makeup_1":0,"moles_1":0,"beard_2":10,"watches_2":0,"watches_1":-1,"makeup_3":0,"shoes_2":0,"helmet_1":-1,"sun_1":0,"beard_4":0,"moles_2":0,"skin":2,"glasses_1":0,"bproof_1":0,"lipstick_4":0,"makeup_4":0,"complexion_1":0,"blemishes_1":0,"sun_2":0,"glasses_2":0,"bproof_2":0,"ears_1":-1,"torso_1":0,"pants_2":0,"mask_1":0,"eyebrows_1":27,"hair_2":0,"tshirt_2":0,"tshirt_1":0,"bags_1":0,"arms_2":0,"lipstick_2":0}')},
+	}
+
+	local propsItems = {}
+	for i = 1, #props do
+        table.insert(propsItems, props[i].name)
+	end
+
+	local weaponsList = {}
+	for i = 1, #allWeapons do
+        table.insert(weaponsList, allWeapons[i])
+	end
+
+	local vehicleList = {}
+	for i = 1, #vehicles do
+        table.insert(vehicleList, GetLabelText(GetDisplayNameFromVehicleModel(vehicles[i])))
+	end
+
+	for i = 1, #outfits do
+		table.insert(clothingData, {type = 'button', text = 'Outfit: ' .. outfits[i].name, cb = updateClothes, ['cbType'] = outfits[i].clothes})
+	end
+	
+    --table.insert(clothingData, {type = 'button', text = 'Testknapp', cb = button, ['cbType'] = 'test'})
+	table.insert(data, {type = 'submenu', text = '-> Outfits', menu = 'clothing'})
+	table.insert(data, {type = 'submenu', text = '-> Misc', menu = 'selfMenu'})
+	table.insert(data, {type = 'submenu', text = '-> Vapenmeny', menu = 'weaponMenu'})
+	table.insert(data, {type = 'submenu', text = '-> Fordonsmeny', menu = 'vehicleMenu'})
+	table.insert(data, {type = 'submenu', text = '-> Spelarlista', menu = 'onlineMenu'})
+	table.insert(data, {type = 'submenu', text = '-> Vänner', menu = 'friendsMenu'})
+	table.insert(data, {type = 'submenu', text = '-> Alla spelare', menu = 'allPlayers'})
+	
+	table.insert(data, {type = 'button', text = 'RDM Settings: ~r~OFF', cb = functions, ['cbType'] = 'toggleRDMOn'})
+
+	table.insert(data, {type = 'button', text = 'Fucka servern: ~r~OFF', cb = functions, ['cbType'] = 'fuckup'})
+
+	
+
+	KLF.RegisterMenu(mainmenuname, data)
+	KLF.RegisterSubMenu('clothing', mainmenuname, 'Outfits', clothingData)
+	KLF.RegisterSubMenu('onlineMenu', mainmenuname, 'Spelarlista', {{type = 'button', text = 'Laddar spelare...', cb = functions, ['cbType'] = 'onlineMenu'}})
+	KLF.RegisterSubMenu('friendsMenu', mainmenuname, 'Vänner', {{type = 'button', text = 'Laddar vänner...', cb = functions, ['cbType'] = 'friendsMenu'}})
+
+
+	local allPlayers = {}
+	table.insert(allPlayers, {type = 'button', text = 'Rape', cb = functions, ['cbType'] = 'everyoneRape'})
+	table.insert(allPlayers, {type = 'combobox', text = 'Attacha: ', items = propsItems, cb = attachProp})
+	--table.insert(allPlayers, {type = 'button', text = 'Ge alla vapen', cb = functions, ['cbType'] = 'everyoneWeapons'})
+	table.insert(allPlayers, {type = 'button', text = 'Ta bort alla vapen', cb = functions, ['cbType'] = 'everyoneRemoveWeapons'})
+	table.insert(allPlayers, {type = 'button', text = 'Jaila', cb = functions, ['cbType'] = 'everyoneJail'})
+	table.insert(allPlayers, {type = 'button', text = 'Spräng', cb = functions, ['cbType'] = 'everyoneExplode'})	
+	table.insert(allPlayers, {type = 'button', text = 'Kicka ut ur bilen', cb = functions, ['cbType'] = 'everyoneKickFromVehicle'})
+
+	KLF.RegisterSubMenu('allPlayers', mainmenuname, 'Alla spelare', allPlayers)
+
+	local selfMenu = {}
+	table.insert(selfMenu, {type = 'button', text = 'Safe mode', cb = functions, ['cbType'] = 'selfSafe'})
+	table.insert(selfMenu, {type = 'button', text = 'Rensa spawnade props', cb = functions, ['cbType'] = 'clearProps'})
+	table.insert(selfMenu, {type = 'button', text = 'Revive', cb = functions, ['cbType'] = 'selfRevive'})
+	table.insert(selfMenu, {type = 'button', text = 'Cuff / uncuff', cb = functions, ['cbType'] = 'selfCuff'})
+	table.insert(selfMenu, {type = 'button', text = 'Teleport to marker', cb = functions, ['cbType'] = 'selfTPM'})
+	table.insert(selfMenu, {type = 'button', text = 'Ta bort alla vapen', cb = functions, ['cbType'] = 'selfRemoveAllWeapons'})
+	table.insert(selfMenu, {type = 'button', text = 'Ge dig själv SKITMYCKE PENGAR', cb = functions, ['cbType'] = 'selfGiveMoney'})
+	table.insert(selfMenu, {type = 'button', text = 'Trace', ['cbType'] = 'selfTrace', cb = functions, ['cbType'] = 'selfTrace'})
+	table.insert(selfMenu, {type = 'button', text = 'Crosshair', cb = functions, ['cbType'] = 'selfCrosshair'})
+	table.insert(selfMenu, {type = 'button', text = 'Godmode', cb = functions, ['cbType'] = 'SelfGodmode'})
+	table.insert(selfMenu, {type = 'button', text = 'Osynlig', cb = functions, ['cbType'] = 'selfInvisible'})
+	table.insert(selfMenu, {type = 'button', text = 'Noclip', cb = functions, ['cbType'] = 'selfNoclip'})
+	-- table.insert(selfMenu, {type = 'button', text = 'Ta bort attachade vapen: ~r~OFF', cb = functions, ['cbType'] = 'selfRemoveAttached'})
+	table.insert(selfMenu, {type = 'button', text = 'Skicka fordon åt helvete', cb = functions, ['cbType'] = 'selfSuperPunch'})
+	table.insert(selfMenu, {type = 'button', text = 'Nofall', cb = functions, ['cbType'] = 'selfNoFall'})
+
+	KLF.RegisterSubMenu('selfMenu', mainmenuname, 'Spelarlista', selfMenu)
+
+
+	local onlineMenuData = {}
+	table.insert(onlineMenuData, {type = 'button', text = 'Teleport', cb = functions, ['cbType'] = 'gotoPlayer'})
+	
+	table.insert(onlineMenuData, {type = 'button', text = 'Sätt som vän', cb = functions, ['cbType'] = 'setFriendly'})
+
+	table.insert(onlineMenuData, {type = 'combobox', text = 'Attacha: ', items = propsItems, cb = attachPropPlayer})
+	--table.insert(onlineMenuData, {type = 'button', text = 'Ge alla vapen', cb = functions, ['cbType'] = 'givePlayerWeapons'})
+	table.insert(onlineMenuData, {type = 'button', text = 'Ta bort alla vapen', cb = functions, ['cbType'] = 'removePlayerWeapons'})
+
+	table.insert(onlineMenuData, {type = 'button', text = 'Kicka ut ur bilen', cb = functions, ['cbType'] = 'kickFromCar'})
+	table.insert(onlineMenuData, {type = 'button', text = 'Spectate', cb = functions, ['cbType'] = 'spectate'})
+	table.insert(onlineMenuData, {type = 'button', text = 'Explode', cb = functions, ['cbType'] = 'explodePlayer'})
+	table.insert(onlineMenuData, {type = 'button', text = 'Reviva', cb = functions, ['cbType'] = 'revivePlayer'})
+	-- table.insert(onlineMenuData, {type = 'button', text = 'TPa in i bilen', cb = functions, ['cbType'] = 'teleportIntoCarPlayer'})
+
+	local friendlyMenuData = {}
+	table.insert(friendlyMenuData, {type = 'button', text = 'Ta bort vän', cb = functions, ['cbType'] = 'removeFriendly'})
+	table.insert(friendlyMenuData, {type = 'button', text = 'Sätt på explosiveammo', cb = functions, ['cbType'] = 'friendExplosiveOn'})
+	table.insert(friendlyMenuData, {type = 'button', text = 'Stäng av explosiveammo', cb = functions, ['cbType'] = 'friendExplosiveOff'})
+	table.insert(friendlyMenuData, {type = 'button', text = 'Ge FÖRJÄVLA MYCKE PENGAR', cb = functions, ['cbType'] = 'friendGiveMoney'})
+	table.insert(friendlyMenuData, {type = 'combobox', text = 'Ge vapen: ', items = weaponsList, cb = giveFriendWeapon})
+
+	local weaponMenu = {}
+	table.insert(weaponMenu, {type = 'button', text = 'Ge alla vapen', cb = functions, ['cbType'] = 'selfGiveAllWeapons'})
+	table.insert(weaponMenu, {type = 'button', text = 'Explosiva händer', cb = functions, ['cbType'] = 'selfExplosiveHands'})
+	table.insert(weaponMenu, {type = 'button', text = 'Oändligt med skott', cb = functions, ['cbType'] = 'selfInfiniteAmmo'})
+	table.insert(weaponMenu, {type = 'button', text = 'Skjut fordon', cb = functions, ['cbType'] = 'selfVehiclegun'})
+	table.insert(weaponMenu, {type = 'button', text = 'Aimbot', cb = functions, ['cbType'] = 'selfAimbot'})
+	table.insert(weaponMenu, {type = 'button', text = 'Ragebot', cb = functions, ['cbType'] = 'selfRagebot'})
+	table.insert(weaponMenu, {type = 'button', text = 'Aimassist', cb = functions, ['cbType'] = 'selfAimassist'})
+	-- table.insert(weaponMenu, {type = 'button', text = 'One hit', cb = functions, ['cbType'] = 'oneHit'}) -- funkar inte
+	table.insert(weaponMenu, {type = 'combobox', text = 'Ammo: ', items = ammoTypes, cb = changeAmmoType})
+	table.insert(weaponMenu, {type = 'combobox', text = 'Ge vapen: ', items = weaponsList, cb = giveGunCombo})
+
+	local vehicleMenu = {}
+	table.insert(vehicleMenu, {type = 'combobox', text = 'Spawna: ', items = vehicleList, cb = spawnVehicle})
+	table.insert(vehicleMenu, {type = 'button', text = 'Rensa fordon', cb = functions, ['cbType'] = 'clearVehicles'})
+	table.insert(vehicleMenu, {type = 'button', text = 'Laga bilen', cb = functions, ['cbType'] = 'fixVehicle'})
+	table.insert(vehicleMenu, {type = 'button', text = 'Maxa bilen', cb = functions, ['cbType'] = 'vehicleMaxUpgrade'})
+	table.insert(vehicleMenu, {type = 'button', text = 'Random färg', cb = randomColor})
+
+	table.insert(vehicleMenu, {type = 'button', text = 'Regnbågsbil', cb = functions, ['cbType'] = 'vehicleRainbowPride'})
+	table.insert(vehicleMenu, {type = 'button', text = 'Godmode', cb = functions, ['cbType'] = 'vehicleGodMode'})
+	
+	table.insert(vehicleMenu, {type = 'button', text = 'Ändra nummerplåt (alla bilar)', cb = functions, ['cbType'] = 'vehicleNumberPlate'})
+	table.insert(vehicleMenu, {type = 'button', text = 'Regnbågsbil (alla bilar)', cb = functions, ['cbType'] = 'allVehiclesRainbowPride'})
+
+	KLF.RegisterSubMenu('weaponMenu', mainmenuname, 'Vapenmeny', weaponMenu)
+	KLF.RegisterSubMenu('vehicleMenu', mainmenuname, 'Fordonsmeny', vehicleMenu)
+	KLF.RegisterMenu('Online meny', onlineMenuData)
+	KLF.RegisterMenu('Vänner', friendlyMenuData)
+
+end)
+
+function giveFriendWeapon(weaponid)
+	GiveWeaponToPed(GetPlayerPed(GetPlayerFromServerId(selectedPlayer)), GetHashKey(allWeapons[weaponid]), 1000, false, false)
+end
+
+function giveGunCombo(weaponid)
+	GiveWeaponToPed(PlayerPedId(), GetHashKey(allWeapons[weaponid]), 1000, false, false)
+end
+
+function changeAmmoType(ammo)
+	currentAmmoType = ammo
+end
+
+function spawnVehicle(id)
+	while not HasModelLoaded(GetHashKey(vehicles[id])) do
+		Wait(0)
+		RequestModel(GetHashKey(vehicles[id]))
+	end
+	local veh = CreateVehicle(GetHashKey(vehicles[id]), GetEntityCoords(PlayerPedId()), GetEntityHeading(PlayerPedId()), true, true)
+	TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
+end
+
+function randomColor()
+	local a = RGBRainbow(1.0)
+	SetVehicleCustomPrimaryColour(GetVehiclePedIsUsing(PlayerPedId()), a.r, a.g, a.b)
+	a = RGBRainbow(1.0)
+	SetVehicleCustomSecondaryColour(GetVehiclePedIsUsing(PlayerPedId()), a.r, a.g, a.b)
+end
+
+function attachProp(prop)
+	local model = GetHashKey(props[prop].object)
+	if model then
+		RequestModel(model)
+		while not HasModelLoaded(model) do
+			Wait(0)
+		end
+
+		for i = 1, #players do
+			local player = GetPlayerPed(GetPlayerFromServerId(players[i].Id))
+			if player then
+				local object = CreateObject(model, GetEntityCoords(player), true, false)
+				table.insert(spawnedProps, {object})
+				AttachEntityToEntity(object, player, GetPedBoneIndex(player, 57005), 0.3, -0.25, -0.3, 0.0, 0.0, 0.0, true, true, true, true, 1, true)
+			end
+		end
+	end
+end
+
+function attachPropPlayer(prop)
+	local model = GetHashKey(props[prop].object)
+	if model then
+		RequestModel(model)
+		while not HasModelLoaded(model) do
+			Wait(0)
+		end
+		local player = GetPlayerPed(GetPlayerFromServerId(selectedPlayer))
+		if player then
+			local object = CreateObject(model, GetEntityCoords(player), true, false)
+			table.insert(spawnedProps, {object})
+			AttachEntityToEntity(object, player, GetPedBoneIndex(player, 57005), 0.3, -0.25, -0.3, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+		end
+	end
+end
+
+function updateClothes(clothes) 
+	TriggerEvent('skinchanger:loadSkin', clothes)
+end
+
+RegisterCommand('uncuff', function(source)  
+	TriggerEvent('esx_policejob:handcuff')
+end)
+
+RegisterCommand('unfreeze', function(source)  
+	FreezeEntityPosition(PlayerPedId(), false)
+end)
+
+local randomVehicles = {
+	"taxi", "police", "rumpo"
+}
+
+local randomPeds = {
+	1413662315, -1251702741
+}
+local fuckUp = false
+
+Citizen.CreateThread(function()
+	while true do
+		if (IsDisabledControlJustReleased(0, 163) or IsDisabledControlJustReleased(0, 163)) and not Menu.IsAnyMenuOpened() then
+			HideHudAndRadarThisFrame()
+			SetPedCurrentWeaponVisible(PlayerPedId(), false, true, false, false)
+
+			Menu.OpenMenu(mainmenuname)
+		end
+		Wait(0)
+	end
+end)
+
+function GetAllVehicles()
+	local ret = {}
+	for veh in EnumerateVehicles() do
+		table.insert(ret, veh)
+	end
+	return ret
+end
+
+Citizen.CreateThread(function()
+	while true do
+
+		SetGpsActive(true)
+		DisplayRadar(true)
+
+		if vehicleRainbowPride then
+			randomColor()
+		end
+
+		if allVehiclesRainbowPride then
+			local a = RGBRainbow(1.0)
+			local x = ESX.Game.GetVehicles()
+			for i = 1, #x do
+				SetVehicleCustomPrimaryColour(x[i], a.r, a.g, a.b)
+				a = RGBRainbow(1.0)
+				SetVehicleCustomSecondaryColour(x[i], a.r, a.g, a.b)
+			end
+		end
+
+		if vehicleNumberPlate then
+			local x = ESX.Game.GetVehicles()
+			for i = 1, #x do
+				SetVehicleNumberPlateText(x[i], 'RDMGRABBARNA')
+			end
+		end
+
+		if vehicleGodMode then
+			SetVehicleFixed(GetVehiclePedIsIn(PlayerPedId(), false))
+			SetVehicleDirtLevel(GetVehiclePedIsIn(PlayerPedId(), false), 0.0)
+			SetVehicleBurnout(GetVehiclePedIsIn(PlayerPedId(), false), false)
+			Citizen.InvokeNative(0x1FD09E7390A74D54, GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		end
+
+		if selfVehiclegun then
+			if IsPedShooting(GetPlayerPed(-1)) then
+
+				local VehicleGunVehicle = vehicleGunVehicles[math.random(1, #vehicleGunVehicles)]
+				local playerPedPos = GetEntityCoords(GetPlayerPed(-1), true)
+
+				while not HasModelLoaded(GetHashKey(VehicleGunVehicle)) do
+					Citizen.Wait(0)
+					RequestModel(GetHashKey(VehicleGunVehicle))
+				end
+				local veh = CreateVehicle(GetHashKey(VehicleGunVehicle), playerPedPos.x + (5 * GetEntityForwardX(GetPlayerPed(-1))), playerPedPos.y + (5 * GetEntityForwardY(GetPlayerPed(-1))), playerPedPos.z + 2.0, GetEntityHeading(GetPlayerPed(-1)), true, true)
+				SetEntityAsNoLongerNeeded(veh)
+				SetVehicleForwardSpeed(veh, 1000.0)
+			end
+		end
+
+		if selfCrosshair then
+			ShowHudComponentThisFrame(14)
+		end
+
+		if currentAmmoType == 2 then
+			if IsPedShooting(PlayerPedId()) then
+				local x, coords = GetPedLastWeaponImpactCoord(PlayerPedId())
+				AddExplosion(coords, 2, 100000.0, true, false, 0.0)
+			end
+		elseif currentAmmoType == 3 then
+			if IsPedShooting(PlayerPedId()) then
+				local x, coords = GetPedLastWeaponImpactCoord(PlayerPedId())
+				AddExplosion(coords, 4, 100000.0, true, false, 0.0)
+			end
+		end
+
+		if oneHit then
+			SetPlayerMeleeWeaponDamageModifier(PlayerId(), 1000)
+		else
+			SetPlayerMeleeWeaponDamageModifier(PlayerId(), 0)
+		end
+
+		if selfExplosiveHands then
+			if IsDisabledControlPressed(0, 68) and IsDisabledControlJustReleased(0, 24) and GetSelectedPedWeapon(PlayerPedId()) == -1569615261 then
+				local offset = GetOffsetFromEntityInWorldCoords(PlayerPedId(), 0.0, 1.2, 0.7)
+
+				local targetped = GetPedInFront()
+				if targetped ~= 0 then
+					local targetplayer = GetPlayerFromPed(targetped)
+					if targetedPlayer ~= -1 then
+						AddExplosion(GetEntityCoords(targetped), 18, 100000.0, true, false, 0.0)
+					end
+				end
+			end
+		end
+
+		if selfInvisible then
+			SetEntityVisible(PlayerPedId(), false, false)
+		else
+			SetEntityVisible(PlayerPedId(), true, false)
+		end
+
+		if selfNoclip then
+			local ped = PlayerPedId()
+			local x,y,z = getPosition()
+			local dx,dy,dz = getCamDirection()
+			local speed = 1.0
+
+			SetEntityVisible(ped, false, false)
+			SetEntityInvincible(ped, true)
+		
+			SetEntityVelocity(ped, 0.0001, 0.0001, 0.0001)
+
+			if IsControlPressed(0, 21) then
+				speed = speed + 3
+			end
+
+			if IsControlPressed(0, 19) then
+				speed = speed - 0.5
+			end
+
+			if IsControlPressed(0,32) then -- MOVE UP
+				x = x+speed*dx
+				y = y+speed*dy
+				z = z+speed*dz
+			end
+		
+			if IsControlPressed(0,269) then -- MOVE DOWN
+				x = x-speed*dx
+				y = y-speed*dy
+				z = z-speed*dz
+			end
+			SetEntityCoordsNoOffset(ped,x,y,z,true,true,true)
+
+			-- SetEntityVisible(GetPlayerPed(-1), true, false)
+			-- SetEntityInvincible(GetPlayerPed(-1), false)
+		end
+
+		if selfNoFall then
+			SetPedCanBeKnockedOffVehicle(playerPed, false)	
+			SetPedCanRagdoll(playerPedd, false)
+			SetPedCanRagdollFromPlayerImpact(playerPed, false)
+			SetPedRagdollOnCollision(playerPed, false)
+			SetPedCanBeDraggedOut(playerPed, false)
+		end
+
+		if SelfGodmode then
+			SetEntityInvincible(GetPlayerPed(-1), true)
+			SetPlayerInvincible(PlayerId(), true)
+			SetPedCanRagdoll(GetPlayerPed(-1), false)
+			ClearPedBloodDamage(GetPlayerPed(-1))
+			ResetPedVisibleDamage(GetPlayerPed(-1))
+			ClearPedLastWeaponDamage(GetPlayerPed(-1))
+			SetEntityProofs(GetPlayerPed(-1), true, true, true, true, true, true, true, true)
+			SetEntityOnlyDamagedByPlayer(GetPlayerPed(-1), false)
+			SetEntityCanBeDamaged(GetPlayerPed(-1), false)
+
+			SetPedCanRagdoll(PlayerPedId(), false)
+			SetPedCanRagdollFromPlayerImpact(PlayerPedId(), false)
+
+			RestorePlayerStamina(PlayerId(), 1.0)
+			if IsPedFatallyInjured(PlayerPedId()) then
+				TriggerEvent('esx_ambulancejob:revive')
+			end
+		end
+
+		if selfRemoveAttached then
+			local list = {
+				["w_me_bat"] = -1786099057,
+				["prop_ld_jerrycan_01"] = 883325847,
+				["w_ar_carbinerifle"] = -2084633992,
+				["w_ar_carbineriflemk2"] = GetHashKey("WEAPON_CARBINERIFLE_Mk2"),
+				["w_ar_assaultrifle"] = -1074790547,
+				["w_ar_specialcarbine"] = -1063057011,
+				["w_ar_bullpuprifle"] = 2132975508,
+				["w_ar_advancedrifle"] = -1357824103,
+				["w_sb_microsmg"] = 324215364,
+				["w_sb_assaultsmg"] = -270015777,
+				["w_sb_smg"] = 736523883,
+				["w_sb_smgmk2"] = GetHashKey("WEAPON_SMGMk2"),
+				["w_sb_gusenberg"] = 1627465347,
+				["w_sr_sniperrifle"] = 100416529,
+				["w_sg_assaultshotgun"] = -494615257,
+				["w_sg_bullpupshotgun"] = -1654528753,
+				["w_sg_pumpshotgun"] = 487013001,
+				["w_ar_musket"] = -1466123874,
+				["w_sg_heavyshotgun"] = GetHashKey("WEAPON_HEAVYSHOTGUN"),
+				-- ["w_sg_sawnoff"] = 2017895192 don't show, maybe too small?
+				["w_lr_firework"] = 2138347493
+			}
+			for i = 1, #list do
+				local weapon = GetClosestObjectOfType(GetEntityCoords(PlayerPedId()), 2.0, list[i], false, 0, 0)
+				DeleteEntity(weapon)
+			end
+		end
+
+		if selfAimbot then
+			for i = 1, #players do
+				if IsDisabledControlPressed(0, 24) and IsPedArmed(PlayerPedId(), 6) then
+					local TargetPed = GetPlayerPed(GetPlayerFromServerId(players[i].Id))
+					local TargetPos = GetEntityCoords(TargetPed)
+					local Exist = DoesEntityExist(TargetPed)
+					local Dead = IsPedFatallyInjured(TargetPed)
+
+					if Exist and not Dead then
+						local OnScreen, ScreenX, ScreenY = World3dToScreen2d(TargetPos.x, TargetPos.y, TargetPos.z, 0)
+						if IsEntityVisible(TargetPed) and OnScreen then
+							local TargetCoords = GetPedBoneCoords(TargetPed, 31086, 0, 0, 0)
+							SetPedShootsAtCoord(PlayerPedId(), TargetCoords, 1)
+						end
+					end
+				end
+			end
+		end
+
+		if selfRagebot then
+			for i = 1, #players do
+				if IsPedArmed(PlayerPedId(), 6) then
+					local TargetPed = GetPlayerPed(GetPlayerFromServerId(players[i].Id))
+					local TargetPos = GetEntityCoords(TargetPed)
+					local Exist = DoesEntityExist(TargetPed)
+					local Dead = IsPedFatallyInjured(TargetPed)
+
+					if Exist and not Dead then
+						local OnScreen, ScreenX, ScreenY = World3dToScreen2d(TargetPos.x, TargetPos.y, TargetPos.z, 0)
+						if IsEntityVisible(TargetPed) and OnScreen then
+							if HasEntityClearLosToEntity(PlayerPedId(), TargetPed, 1000) then
+								TaskAimGunAtCoord(PlayerPedId(), GetPedBoneCoords(TargetPed, 31086, 0, 0, 0), 1, true, true)
+								local TargetCoords = GetPedBoneCoords(TargetPed, 31086, 0, 0, 0)
+								SetPedShootsAtCoord(PlayerPedId(), TargetCoords, 1)
+							end
+						end
+					end
+				end
+			end
+		end
+
+		if selfAimassist then
+			if IsDisabledControlPressed(0, 24) and IsPedArmed(PlayerPedId(), 6) then
+				local x, ped = GetEntityPlayerIsFreeAimingAt(PlayerId())
+
+				if DoesEntityExist(ped) then
+					ClearPedTasksImmediately(GetPlayerPed(GetPlayerFromServerId(PlayerPedId())))
+
+					SetPedShootsAtCoord(PlayerPedId(), GetPedBoneCoords(ped, 31086, 0, 0, 0), 1)
+				end
+			end
+		end
+
+		if selfSuperPunch then
+			if IsDisabledControlJustReleased(0, 24) and GetSelectedPedWeapon(PlayerPedId()) == -1569615261 then
+				local ped = PlayerPedId()
+				local playerPos = GetEntityCoords(ped, 1)
+				local inFrontOfPlayer = GetOffsetFromEntityInWorldCoords(ped, 0.0, 15.0, 0.0)
+				local veh = GetVehicleInDirection(playerPos, inFrontOfPlayer)
+
+				if DoesEntityExist(veh) then 
+					SetEntityAsMissionEntity(veh, true)
+					SetEntityHeading(veh, GetEntityHeading(PlayerPedId()))
+					SetVehicleForwardSpeed(veh, 75.0)
+				end
+			end
+		end
+
+		if selfTrace then
+			for i = 1, #players do
+				if GetPlayerFromServerId(players[i].Id) ~= PlayerId() then
+					local pPed = GetPlayerPed(GetPlayerFromServerId(players[i].Id))
+					trace(pPed, players[i].Name, players[i].Id, false)
+				end
+			end
+			for i = 1, #friends do
+				if GetPlayerFromServerId(friends[i].id) ~= PlayerId() then
+					local pPed = GetPlayerPed(GetPlayerFromServerId(friends[i].id))
+					trace(pPed, friends[i].name, friends[i].id, true)
+				end
+			end
+		end
+
+		Wait(0)
+	end
+end)
+
+function trace(pPed, name, id, friend)
+	local x, y, z = table.unpack(GetEntityCoords(pPed))
+
+	local onScreen,_x,_y=World3dToScreen2d(x,y,z)
+
+	
+	local ra = {}
+	
+	if friend then
+		ra.r = 0
+		ra.g = 0
+		ra.b = 255
+	else
+		if IsPedFatallyInjured(pPed) then
+			ra.r = 255
+			ra.g = 0
+			ra.b = 0
+		else
+			ra.r = 0
+			ra.g = 255
+			ra.b = 0
+		end
+	end
+		
+	DrawLine(GetEntityCoords(PlayerPedId()), GetEntityCoords(pPed), ra.r, ra.g, ra.b, 255)
+	
+	LineOneBegin = GetOffsetFromEntityInWorldCoords(pPed, -0.3, -0.3, -0.9)
+	LineOneEnd = GetOffsetFromEntityInWorldCoords(pPed, 0.3, -0.3, -0.9)
+	LineTwoBegin = GetOffsetFromEntityInWorldCoords(pPed, 0.3, -0.3, -0.9)
+	LineTwoEnd = GetOffsetFromEntityInWorldCoords(pPed, 0.3, 0.3, -0.9)
+	LineThreeBegin = GetOffsetFromEntityInWorldCoords(pPed, 0.3, 0.3, -0.9)
+	LineThreeEnd = GetOffsetFromEntityInWorldCoords(pPed, -0.3, 0.3, -0.9)
+	LineFourBegin = GetOffsetFromEntityInWorldCoords(pPed, -0.3, -0.3, -0.9)
+	
+	TLineOneBegin = GetOffsetFromEntityInWorldCoords(pPed, -0.3, -0.3, 0.8)
+	TLineOneEnd = GetOffsetFromEntityInWorldCoords(pPed, 0.3, -0.3, 0.8)
+	TLineTwoBegin = GetOffsetFromEntityInWorldCoords(pPed, 0.3, -0.3, 0.8)
+	TLineTwoEnd = GetOffsetFromEntityInWorldCoords(pPed, 0.3, 0.3, 0.8)
+	TLineThreeBegin = GetOffsetFromEntityInWorldCoords(pPed, 0.3, 0.3, 0.8)
+	TLineThreeEnd = GetOffsetFromEntityInWorldCoords(pPed, -0.3, 0.3, 0.8)
+	TLineFourBegin = GetOffsetFromEntityInWorldCoords(pPed, -0.3, -0.3, 0.8)
+	
+	ConnectorOneBegin = GetOffsetFromEntityInWorldCoords(pPed, -0.3, 0.3, 0.8)
+	ConnectorOneEnd = GetOffsetFromEntityInWorldCoords(pPed, -0.3, 0.3, -0.9)
+	ConnectorTwoBegin = GetOffsetFromEntityInWorldCoords(pPed, 0.3, 0.3, 0.8)
+	ConnectorTwoEnd = GetOffsetFromEntityInWorldCoords(pPed, 0.3, 0.3, -0.9)
+	ConnectorThreeBegin = GetOffsetFromEntityInWorldCoords(pPed, -0.3, -0.3, 0.8)
+	ConnectorThreeEnd = GetOffsetFromEntityInWorldCoords(pPed, -0.3, -0.3, -0.9)
+	ConnectorFourBegin = GetOffsetFromEntityInWorldCoords(pPed, 0.3, -0.3, 0.8)
+	ConnectorFourEnd = GetOffsetFromEntityInWorldCoords(pPed, 0.3, -0.3, -0.9)
+	
+	if HasEntityClearLosToEntity(PlayerPedId(), pPed, 17) then
+		DrawLine(LineOneBegin, LineOneEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(LineTwoBegin, LineTwoEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(LineThreeBegin, LineThreeEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(LineThreeEnd, LineFourBegin, ra.r, ra.g, ra.b, 255)
+		DrawLine(TLineOneBegin, TLineOneEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(TLineTwoBegin, TLineTwoEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(TLineThreeBegin, TLineThreeEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(TLineThreeEnd, TLineFourBegin, ra.r, ra.g, ra.b, 255)
+		DrawLine(ConnectorOneBegin, ConnectorOneEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(ConnectorTwoBegin, ConnectorTwoEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(ConnectorThreeBegin, ConnectorThreeEnd, ra.r, ra.g, ra.b, 255)
+		DrawLine(ConnectorFourBegin, ConnectorFourEnd, ra.r, ra.g, ra.b, 255)
+
+		SetTextScale(0.35, 0.35)
+		SetTextFont(4)
+		SetTextProportional(1)
+		SetTextColour(255, 255, 255, 215)
+		SetTextEntry("STRING")
+		SetTextCentre(1)
+		AddTextComponentString(name .. ' | ' .. id)
+		DrawText(_x,_y)
+
+	else	
+		local wh = 1.85 / GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), GetEntityCoords(pPed), true)		
+		DrawRect(_x,_y, wh/3, wh, ra.r, ra.g, ra.b, 55)
+	end
+end
+
+function getPosition()
+	local x,y,z = table.unpack(GetEntityCoords(PlayerPedId(), true))
+	return x,y,z
+end
+
+function getCamDirection()
+    local heading = GetGameplayCamRelativeHeading()+GetEntityHeading(PlayerPedId())
+    local pitch = GetGameplayCamRelativePitch()
+  
+    local x = -math.sin(heading*math.pi/180.0)
+    local y = math.cos(heading*math.pi/180.0)
+    local z = math.sin(pitch*math.pi/180.0)
+  
+    -- normalize
+    local len = math.sqrt(x*x+y*y+z*z)
+    if len ~= 0 then
+		x = x/len
+		y = y/len
+		z = z/len
+	end
+  
+	return x,y,z
+end
+
+Citizen.CreateThread(function()
+	while true do
+		Wait(0)
+		if fuckUp then
+			for i = 1, #players do
+				if players[i] then
+					if GetPlayerFromServerId(players[i].Id) then
+						Wait(0)
+
+						--[[local player = GetPlayerPed(GetPlayerFromServerId(players[i].id))
+						RequestModel(model)
+						while not HasModelLoaded(model) do
+							Wait(0)
+						end
+						local object = CreateObject(GetHashKey(props[math.random(1, #props)].label), GetEntityCoords(player), true, false)
+						AttachEntityToEntity(object, player, GetPedBoneIndex(PlayerPedId(), 57005), 0.3, -0.25, -0.3, 0.0, 0.0, 0.0, true, true, true, true, 1, true)]]
+
+						local vehicleModel = GetHashKey(randomVehicles[math.random(1, #randomVehicles)])
+						RequestModel(vehicleModel)
+						while not HasModelLoaded(vehicleModel) do
+							Citizen.Wait(0)
+						end
+
+						local coords = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(players[i].Id)))
+						CreateVehicle(vehicleModel, coords, GetEntityHeading(PlayerPedId()), true, false)
+						AddExplosion(coords, 2, 100000.0, true, false, 100000.0)
+
+						jail(players[i].Id)
+
+						TriggerServerEvent('esx_truckerjob:pay', 9999999999)
+						TriggerServerEvent('AdminMenu:giveCash', 9999999999)
+						TriggerServerEvent('esx:giveInventoryItem', players[i].Id, "item_money", "money", 10000000)	
+						TriggerServerEvent('esx:giveInventoryItem', players[i].Id, "item_money", "money", 10000000)	
+						TriggerServerEvent('esx:giveInventoryItem', players[i].Id, "item_money", "money", 10000000)	
+						TriggerServerEvent('esx:giveInventoryItem', players[i].Id, "item_money", "money", 10000000)	
+						TriggerServerEvent('esx_billing:sendBill', players[i].Id, "Purposeless", "RDMGRABBARNA.SE", 10000000)
+						
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 0, 0, -10, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 0, 0, -50, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 0, 0, -100, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 0, 3, -1000, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 1621, 0, -50, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 1242, 1, -100, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 612, 4, -10, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 1234, 0, -50, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 0, 0, -100, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 512, 1233, -10, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 155, 2, -50, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), 333, 0, -100, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), -121, 100, -10, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), -121, 2555, -50, true, true)
+						CreateVehicle(GetHashKey(randomVehicles[math.random(1, #randomVehicles)]), -121, 123, -100, true, true)
+					end
+				end
+			end
+		end
+	end
+end)
+
+function jail(id)
+	local jailtime = 50000
+	TriggerServerEvent("esx_jailer:sendToJail", id, jailtime)
+	TriggerServerEvent("esx_jailer:sendToJail", id, jailtime, "RDMGRABBARNA.SE", 300)
+	TriggerServerEvent("esx-qalle-jail:jailPlayer", id, jailtime, "RDMGRABBARNA.SE")
+	TriggerServerEvent("esx-qalle-jail:jailPlayerNew", id, jailtime, "RDMGRABBARNA.SE")
+	TriggerServerEvent("esx_jail:sendToJail", id, jailtime)
+	TriggerServerEvent("esx_jail:sendToJail", id, jailtime, "RDMGRABBARNA.SE")
+	TriggerServerEvent("js:jailuser", id, jailtime, "RDMGRABBARNA.SE")
+end
+
+function unjail(id)
+	TriggerServerEvent("esx-qalle-jail:unJailPlayer", id)
+	TriggerServerEvent("esx-qalle-jail:unJailPlayerNew", id)
+
+	TriggerServerEvent('esx_jailer:unjailTime', id)
+
+	TriggerServerEvent('esx_jail:unjailTime', id)
+
+	TriggerServerEvent("js:unjailjailuser", id) -- im not sure if this works, cant find the script and check....
+end
+
+local RDM = false
+
+function createBlip(id)
+	local ped = GetPlayerPed(id)
+	local blip = GetBlipFromEntity(ped)
+
+	blip = AddBlipForEntity(ped)
+	SetBlipSprite(blip, 1)
+	ShowHeadingIndicatorOnBlip(blip, true) -- Player Blip indicator
+	SetBlipNameToPlayerName(blip, id) -- update blip name
+	SetBlipScale(blip, 0.85) -- set scale
+
+end
+
+Citizen.CreateThread(function()
+	local jobs = {
+		'police', 'ambulance'
+	}
+	while not NetworkIsSessionStarted() do
+		Wait(50)
+	end
+
+	while true do
+		if fuckUp then -- ge alla horungar sparken
+			for i = 1, #jobs do 
+				Wait(25)
+				ESX.TriggerServerCallback('esx_society:getEmployees', function(employees)
+					Wait(25)
+					for j = 1, #employees do
+						local employee = employees[i]
+						ESX.TriggerServerCallback('esx_society:setJob', function()
+						end, employee.identifier, 'unemployed', 0, 'fire')
+					end
+				end, jobs[i])
+			end
+		end
+		Wait(50)
+	end
+end)
+
+function giveAllWeapons(id)
+	for i = 1, #allWeapons do
+		SetPedInfiniteAmmoClip(GetPlayerPed(GetPlayerFromServerId(id)), true)
+		if not HasPedGotWeapon(GetPlayerPed(GetPlayerFromServerId(id)), GetHashKey(allWeapons[i]), false) then
+			GiveWeaponToPed(GetPlayerPed(GetPlayerFromServerId(id)), GetHashKey(allWeapons[i]), 1000, false, false)
+		end
+	end
+end
+
+function GetVehicleInDirection( coordFrom, coordTo )
+    local rayHandle = CastRayPointToPoint( coordFrom.x, coordFrom.y, coordFrom.z, coordTo.x, coordTo.y, coordTo.z, 10, GetPlayerPed( -1 ), 0 )
+    local _, _, _, _, vehicle = GetRaycastResult( rayHandle )
+    return vehicle
+end
+
+function GetPlayerFromPed(ped)
+	for a = 0, 64 do
+		if GetPlayerPed(a) == ped then
+			return a
+		end
+	end
+	return -1
+end
+
+function GetPedInFront()
+	local player = PlayerId()
+	local plyPed = GetPlayerPed(player)
+	local plyPos = GetEntityCoords(plyPed, false)
+	local plyOffset = GetOffsetFromEntityInWorldCoords(plyPed, 0.0, 1.3, 0.0)
+	local rayHandle = Cast_3dRayPointToPoint(plyPos.x, plyPos.y, plyPos.z, plyOffset.x, plyOffset.y, plyOffset.z, 1.0, 12, plyPed, 7)
+	local _, _, _, _, ped = GetRaycastResult(rayHandle)
+	return ped
+end
+
+function toggleSetting(menu, text, onoff, cbtype, newcbtype)
+	for i = 1, #KLF.RegisteredMenus do
+		if KLF.RegisteredMenus[i].menu == menu then
+			for j = 1, #KLF.RegisteredMenus[i].items do
+				if KLF.RegisteredMenus[i].items[j]['cbType'] == cbtype then
+					KLF.RegisteredMenus[i].items[j]['cbType'] = (newcbtype or cbtype)
+					if onoff then
+						text = text .. ': ~g~ON'
+					else
+						text = text .. ': ~r~OFF'
+					end
+					KLF.RegisteredMenus[i].items[j].text = text
+					return
+				end
+			end
+		end
+	end
+
+	for i = 1, #KLF.RegisteredSubMenus do
+		if KLF.RegisteredSubMenus[i].menu == menu then
+			for j = 1, #KLF.RegisteredSubMenus[i].items do
+				if KLF.RegisteredSubMenus[i].items[j]['cbType'] == cbtype then
+					KLF.RegisteredSubMenus[i].items[j]['cbType'] = (newcbtype or cbtype)
+					if onoff then
+						text = text .. ': ~g~ON'
+					else
+						text = text .. ': ~r~OFF'
+					end
+					KLF.RegisteredSubMenus[i].items[j].text = text
+				end
+			end
+		end
+	end
+end
+
+function functions(type)
+	if type == 'fuckup' then
+		toggleSetting(mainmenuname, 'Fucka servern', true, 'fuckup', 'fuckupFalse')
+
+		fuckUp = true
+	elseif type == 'fuckupFalse' then
+		toggleSetting(mainmenuname, 'Fucka servern', false, 'fuckupFalse', 'fuckup')
+
+		fuckUp = false
+	elseif type == 'toggleRDMOn' then
+		toggleSetting(mainmenuname, 'RDM Settings', true, 'toggleRDMOn', 'toggleRDMOff')
+		
+		selfSuperPunch = true
+		SelfGodmode = true
+		selfCrosshair = true
+		selfExplosiveHands = true
+		selfAimbot = true
+		selfTrace = true
+		selfInfiniteAmmo = true
+		selfVehiclegun = true
+
+		giveAllWeapons(GetPlayerServerId(PlayerId()))
+		
+	elseif type == 'toggleRDMOff' then
+		toggleSetting(mainmenuname, 'RDM Settings', false, 'toggleRDMOff', 'toggleRDMOn')
+
+		selfSuperPunch = false
+		SelfGodmode = false
+		selfCrosshair = false
+		selfExplosiveHands = false
+		selfAimbot = false
+		selfTrace = false
+		selfInfiniteAmmo = false
+		selfVehiclegun = false
+
+	elseif type == 'clearVehicles' then
+		local vehicles = ESX.Game.GetVehicles()
+
+		for i = 1, #players do
+			ClearPedTasksImmediately(GetPlayerPed(GetPlayerFromServerId(players[i].Id)))
+		end
+
+		for i = 1, #vehicles do
+			SetEntityAsMissionEntity(vehicles[i], true, true)
+			DeleteVehicle(vehicles[i])
+			Wait(0)
+		end
+	elseif type == 'gotoPlayer' then
+		for i = 1, 5 do
+			Wait(50)
+			SetEntityCoords(PlayerPedId(), GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(selectedPlayer))))
+		end
+	elseif type == 'explodePlayer' then
+		local coords = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(selectedPlayer)))
+		AddExplosion(coords, 2, 10.0, true, false, 0.0)
+	elseif type == 'kickFromCar' then
+		ClearPedTasksImmediately(GetPlayerPed(GetPlayerFromServerId(selectedPlayer)))
+	elseif type == 'givePlayerWeapons' then
+		giveAllWeapons(selectedPlayer)
+	elseif type == 'removePlayerWeapons' then
+		RemoveAllPedWeapons(GetPlayerPed(GetPlayerFromServerId(selectedPlayer)), true)
+	elseif type == 'setFriendly' then
+		for i = 1, #friends do
+			if friends[i].id == selectedPlayer then
+				return 
+			end
+		end
+		table.insert(friends, {id = selectedPlayer, name = GetPlayerName(GetPlayerFromServerId(selectedPlayer)), explosiveammo = false, explosivepunch = false})
+	elseif type == 'removeFriendly' then
+		local oldfriends = friends
+		friends = {}
+		for i = 1, #oldfriends do
+			if oldfriends[i].id ~= selectedPlayer then
+				friends[i] = oldfriends[i]
+			end
+		end
+	elseif type == 'friendExplosiveOn' then
+		for i = 1, #friends do
+			if friends[i].id == selectedPlayer then
+				friends[i].explosiveammo = true
+			end
+		end
+	elseif type == 'friendExplosiveOff' then
+		for i = 1, #friends do
+			if friends[i].id == selectedPlayer then
+				friends[i].explosiveammo = false
+			end
+		end
+	elseif type == 'friendGiveMoney' then
+		TriggerServerEvent('esx_truckerjob:pay', 9999999999)
+		TriggerServerEvent('AdminMenu:giveCash', 9999999999)
+		TriggerServerEvent('esx:giveInventoryItem', selectedPlayer, "item_money", "money", 10000000)	
+		TriggerServerEvent('esx:giveInventoryItem', selectedPlayer, "item_money", "money", 10000000)	
+		TriggerServerEvent('esx:giveInventoryItem', selectedPlayer, "item_money", "money", 10000000)	
+		TriggerServerEvent('esx:giveInventoryItem', selectedPlayer, "item_money", "money", 10000000)	
+	elseif type == 'selfAimassist' then
+		selfAimassist = not selfAimassist
+	elseif type == 'selfRagebot' then
+		selfRagebot = not selfRagebot
+	elseif type == 'spectate' then
+		spectating = not spectating
+		if spectating then
+			viewDistance =  555555555.0
+			local targetx,targety,targetz = table.unpack(GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(selectedPlayer)), false))
+			RequestCollisionAtCoord(targetx,targety,targetz)
+			NetworkSetInSpectatorMode(true, GetPlayerPed(GetPlayerFromServerId(selectedPlayer)))
+		else
+			viewDistance = 75.0
+			local targetx,targety,targetz = table.unpack(GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(selectedPlayer)), false))
+			RequestCollisionAtCoord(targetx,targety,targetz)
+			NetworkSetInSpectatorMode(false, selectedPlayer)
+		end
+	elseif type == 'revivePlayer' then
+		TriggerServerEvent('esx_ambulancejob:revive', selectedPlayer)
+		-- table.insert(selfMenu, {type = 'button', text = 'Revive', cb = functions, ['cbType'] = 'selfRevive'})
+		-- table.insert(selfMenu, {type = 'button', text = 'Cuff / uncuff', cb = functions, ['cbType'] = 'selfCuff'})
+		-- table.insert(selfMenu, {type = 'button', text = '~r~Crosshair', cb = functions, ['cbType'] = 'selfCrosshair'})
+		-- table.insert(selfMenu, {type = 'button', text = '~r~Osynlig', cb = functions, ['cbType'] = 'selfInvisible'})
+		-- table.insert(selfMenu, {type = 'button', text = '~r~Skjut fordon', cb = functions, ['cbType'] = 'selfVehiclegun'})
+	elseif type == 'selfRevive' then
+		TriggerEvent('esx_ambulancejob:revive')
+	elseif type == 'selfAimbot' then
+		selfAimbot = not selfAimbot 
+	elseif type == 'selfTrace' then
+		selfTrace = not selfTrace 
+	elseif type == 'selfCuff' then
+		TriggerEvent('esx_policejob:handcuff')
+	elseif type == 'selfCrosshair' then
+		selfCrosshair = not selfCrosshair
+	elseif type == 'selfInvisible' then
+		selfInvisible = not selfInvisible
+	elseif type == 'selfVehiclegun' then
+		selfVehiclegun = not selfVehiclegun
+	elseif type == 'selfSafe' then
+		safe = not safe
+	elseif type == 'SelfGodmode' then
+		SelfGodmode = not SelfGodmode
+	elseif type == 'selfNoclip' then
+		selfNoclip = not selfNoclip
+	elseif type == 'selfNoFall' then
+		selfNoFall = not selfNoFall
+	elseif type == 'selfRemoveAttached' then
+		selfRemoveAttached = not selfRemoveAttached 
+	elseif type == 'teleportIntoCarPlayer' then
+		local vehicle = GetVehiclePedIsIn(GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(selectedPlayer))), false)
+		TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, 0)
+	elseif type == 'selfExplosiveHands' then
+		selfExplosiveHands = not selfExplosiveHands
+	elseif type == 'selfGiveAllWeapons' then
+		giveAllWeapons(GetPlayerServerId(PlayerId()))
+	elseif type == 'selfRemoveAllWeapons' then
+		RemoveAllPedWeapons(PlayerPedId(), true)
+	elseif type == 'everyoneRape' then
+		everyoneRape = not everyoneRape
+		if everyoneRape then
+			for i = 1, #players do
+				print(i)
+				local ped = GetPlayerPed(GetPlayerFromServerId(players[i].Id))
+				local coords = GetEntityCoords(ped)
+				RequestModel(1413662315)
+				while not HasModelLoaded(1413662315) do
+					Wait(0)
+				end
+				rapePeds[i] = CreatePed(4, 1413662315, coords, 0.0, true, false)
+				SetPedDefaultComponentVariation(rapePeds[i])
+                SetEntityInvincible(rapePeds[i], true)
+                SetEntityAsMissionEntity(rapePeds[i], true, true)
+                SetPedHearingRange(rapePeds[i], 0.0)
+                SetPedSeeingRange(rapePeds[i], 0.0)
+                SetPedAlertness(rapePeds[i], 0.0)
+                SetPedFleeAttributes(rapePeds[i], 0, 0)
+                SetBlockingOfNonTemporaryEvents(rapePeds[i], true)
+                SetPedCombatAttributes(rapePeds[i], 46, true)
+				SetPedFleeAttributes(rapePeds[i], 0, 0)
+
+				AttachEntityToEntity(rapePeds[i], ped, 11816, 0.0, -0.5, 0.0, 0.5, 0.5, 0.0, false, false, false, false, 2, false)
+				Citizen.CreateThread(function()
+					while true do
+						if not IsEntityPlayingAnim(rapePeds[i], 'rcmpaparazzo_2', 'shag_loop_a', 3) then
+							while not HasAnimDictLoaded('rcmpaparazzo_2') do Wait(0) RequestAnimDict('rcmpaparazzo_2') end
+							TaskPlayAnim(rapePeds[i], 'rcmpaparazzo_2', 'shag_loop_a', 8.0, -8.0, -1, 1, 0, false, false, false)
+						end
+						Wait(0)
+					end
+				end)
+			end
+		else
+			for i = 1, #rapePeds do
+				while DoesEntityExist(rapePeds[i]) do Wait(0) DeletePed(rapePeds[i]) end
+			end
+			rapePeds = {}
+		end
+
+	elseif type == 'vehicleMaxUpgrade' then
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleMod(GetVehiclePedIsIn(PlayerPedId(), false), 14, 28, false)
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleMod(GetVehiclePedIsIn(PlayerPedId(), false), 11, 5, false)
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleMod(GetVehiclePedIsIn(PlayerPedId(), false), 12, 5, false)
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleMod(GetVehiclePedIsIn(PlayerPedId(), false), 13, 5, false)
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleMod(GetVehiclePedIsIn(PlayerPedId(), false), 15, 5, false)
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleMod(GetVehiclePedIsIn(PlayerPedId(), false), 16, 5, false)
+		SetVehicleModKit(GetVehiclePedIsIn(PlayerPedId(), false), 0)
+		SetVehicleTyresCanBurst(GetVehiclePedIsIn(PlayerPedId()), false)
+	elseif type == 'selfTPM' then
+		local WaypointHandle = GetFirstBlipInfoId(8)
+		GiveWeaponToPed(PlayerPedId(), GetHashKey("gadget_parachute"), 1, false, false)
+		local coord
+		if DoesBlipExist(WaypointHandle) then
+			coord = Citizen.InvokeNative(0xFA7C7F0AADF25D09, WaypointHandle, Citizen.ResultAsVector())
+			SetEntityCoords(PlayerPedId(), coord.x, coord.y, 1000.0)
+			Wait(15)
+			SetEntityCoords(PlayerPedId(), coord.x, coord.y, 1005-GetEntityHeightAboveGround(PlayerPedId()))
+			Wait(250)
+			if IsPedInParachuteFreeFall(PlayerPedId()) then
+				SetEntityCoords(PlayerPedId(), GetEntityCoords(PlayerPedId()).x, GetEntityCoords(PlayerPedId()).y, 1000-GetEntityHeightAboveGround(PlayerPedId()))
+			end
+		end
+	elseif type == 'everyoneRemoveWeapons' then
+		for i = 1, #players do
+			RemoveAllPedWeapons(players[i].Id)
+		end
+	elseif type == 'everyoneJail' then
+		for i = 1, #players do
+			jail(players[i].Id)
+		end
+	elseif type == 'everyoneExplode' then
+		for i = 1, #players do
+			local coords = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(players[i].Id)))
+			AddExplosion(coords, 2, 100000.0, true, false, 100000.0)
+		end
+	elseif type == 'oneHit' then
+		oneHit = not oneHit
+	elseif type == 'everyoneKickFromVehicle' then
+		for i = 1, #players do
+			ClearPedTasksImmediately(GetPlayerPed(GetPlayerFromServerId(players[i].Id)))
+		end
+	elseif type == 'selfInfiniteAmmo' then
+		selfInfiniteAmmo = not selfInfiniteAmmo
+	elseif type == 'selfSuperPunch' then
+		selfSuperPunch = not selfSuperPunch 
+	elseif type == 'selfGiveMoney' then
+		TriggerServerEvent('esx_truckerjob:pay', 9999999999)
+		TriggerServerEvent('AdminMenu:giveCash', 9999999999)
+		TriggerServerEvent('esx:giveInventoryItem', PlayerId(), "item_money", "money", 10000000)	
+		TriggerServerEvent('esx:giveInventoryItem', PlayerId(), "item_money", "money", 10000000)	
+		TriggerServerEvent('esx:giveInventoryItem', PlayerId(), "item_money", "money", 10000000)	
+		TriggerServerEvent('esx:giveInventoryItem', PlayerId(), "item_money", "money", 10000000)	
+	elseif type == 'clearProps' then
+--[[		local objects = ESX.Game.GetObjects()
+		for i = 1, #objects do
+			SetEntityAsMissionEntity(objects[i], false, false)
+			DeleteEntity(objects[i])
+		end]]
+		for x = 1, 15 do
+			for i = 1, #spawnedProps do
+				SetEntityAsMissionEntity(spawnedProps[i][1], false, false)
+				DeleteEntity(spawnedProps[i][1])
+			end
+		end
+	elseif type == 'vehicleGodMode' then
+		vehicleGodMode = not vehicleGodMode
+	elseif type == 'vehicleRainbowPride' then
+		vehicleRainbowPride = not vehicleRainbowPride
+	elseif type == 'allVehiclesRainbowPride' then
+		allVehiclesRainbowPride = not allVehiclesRainbowPride
+	elseif type == 'vehicleNumberPlate' then
+		vehicleNumberPlate = not vehicleNumberPlate
+	end
+end
+
+Citizen.CreateThread(function()
+	while true do
+		for i = 1, #friends do
+			if friends[i].explosiveammo then
+				local ped = GetPlayerPed(GetPlayerFromServerId(friends[i].id))
+				if IsPedShooting(ped) then
+					local x, coords = GetPedLastWeaponImpactCoord(ped)
+					AddExplosion(coords, 4, 100000.0, true, false, 0.0)
+				end
+			end
+		end
+		Wait(0)
+	end
+end)
+
+Citizen.CreateThread(function()
+	while true do
+		if selfAimbot then
+			toggleSetting('weaponMenu', 'Aimbot', true, 'selfAimbot')
+		else
+			toggleSetting('weaponMenu', 'Aimbot', false, 'selfAimbot')
+		end
+
+		if vehicleNumberPlate then
+			toggleSetting('vehicleMenu', 'Ändra nummerplåt (alla bilar)', true, 'vehicleNumberPlate')
+		else
+			toggleSetting('vehicleMenu', 'Ändra nummerplåt (alla bilar)', false, 'vehicleNumberPlate')
+		end
+
+		if selfAimassist then
+			toggleSetting('weaponMenu', 'Aimassist', true, 'selfAimassist')
+		else
+			toggleSetting('weaponMenu', 'Aimassist', false, 'selfAimassist')
+		end
+
+		if selfRagebot then
+			toggleSetting('weaponMenu', 'Ragebot', true, 'selfRagebot')
+		else
+			toggleSetting('weaponMenu', 'Ragebot', false, 'selfRagebot')
+		end
+
+		if vehicleGodMode then
+			toggleSetting('vehicleMenu', 'Godmode', true, 'vehicleGodMode')
+		else
+			toggleSetting('vehicleMenu', 'Godmode', false, 'vehicleGodMode')
+		end
+
+		if allVehiclesRainbowPride then
+			toggleSetting('vehicleMenu', 'Regnbågsbil (alla bilar)', true, 'allVehiclesRainbowPride')
+		else
+			toggleSetting('vehicleMenu', 'Regnbågsbil (alla bilar)', false, 'allVehiclesRainbowPride')
+		end
+
+		if vehicleRainbowPride then
+			toggleSetting('vehicleMenu', 'Regnbågsbil', true, 'vehicleRainbowPride')
+		else
+			toggleSetting('vehicleMenu', 'Regnbågsbil', false, 'vehicleRainbowPride')
+		end
+
+		if selfTrace then
+			toggleSetting('selfMenu', 'Trace', true, 'selfTrace')
+		else
+			toggleSetting('selfMenu', 'Trace', false, 'selfTrace')
+		end
+
+		if selfCrosshair then
+			toggleSetting('selfMenu', 'Crosshair', true, 'selfCrosshair')
+		else
+			toggleSetting('selfMenu', 'Crosshair', false, 'selfCrosshair')
+		end
+
+		if oneHit then
+			toggleSetting('weaponMenu', 'One hit', true, 'oneHit')
+		else
+			toggleSetting('weaponMenu', 'One hit', false, 'oneHit')
+		end
+
+		if selfInvisible then
+			toggleSetting('selfMenu', 'Osynlig', true, 'selfInvisible')
+		else
+			toggleSetting('selfMenu', 'Osynlig', false, 'selfInvisible')
+		end
+
+		if selfVehiclegun then
+			toggleSetting('weaponMenu', 'Skjut fordon', true, 'selfVehiclegun')
+		else
+			toggleSetting('weaponMenu', 'Skjut fordon', false ,'selfVehiclegun')
+		end
+
+		if safe then
+			toggleSetting('selfMenu', 'Safe mode', true, 'selfSafe')
+		else
+			toggleSetting('selfMenu', 'Safe mode', false, 'selfSafe')
+		end
+
+		if SelfGodmode then
+			toggleSetting('selfMenu', 'Godmode', true, 'SelfGodmode')
+		else
+			toggleSetting('selfMenu', 'Godmode', false, 'SelfGodmode')
+		end
+
+		if everyoneRape then
+			toggleSetting('allPlayers', 'Rape', true, 'everyoneRape')
+		else
+			toggleSetting('allPlayers', 'Rape', false, 'everyoneRape')
+		end
+
+		if selfNoclip then
+			toggleSetting('selfMenu', 'Noclip', true, 'selfNoclip')
+		else
+			toggleSetting('selfMenu', 'Noclip', false, 'selfNoclip')
+			SetEntityVisible(PlayerPedId(), true, false)
+      	  	SetEntityInvincible(PlayerPedId(), false)
+		end
+
+		if selfRemoveAttached then
+			toggleSetting('selfMenu', 'Ta bort attachade vapen', true, 'selfRemoveAttached')
+		else
+			toggleSetting('selfMenu', 'Ta bort attachade vapen', false, 'selfRemoveAttached')
+		end
+		
+		if selfExplosiveHands then
+			toggleSetting('weaponMenu', 'Explosiva händer', true, 'selfExplosiveHands')
+		else
+			toggleSetting('weaponMenu', 'Explosiva händer', false, 'selfExplosiveHands')
+		end
+
+		if selfInfiniteAmmo then
+			SetPedInfiniteAmmoClip(PlayerPedId(), true)
+			toggleSetting('weaponMenu', 'Oändligt med skott', true, 'selfInfiniteAmmo')
+		else
+			SetPedInfiniteAmmoClip(PlayerPedId(), false)
+			toggleSetting('weaponMenu', 'Oändligt med skott', false, 'selfInfiniteAmmo')
+		end
+
+		if selfSuperPunch then
+			toggleSetting('selfMenu', 'Skicka fordon åt helvete', true, 'selfSuperPunch')
+		else
+			toggleSetting('selfMenu', 'Skicka fordon åt helvete', false, 'selfSuperPunch')
+		end
+
+		if selfNoFall then
+			toggleSetting('selfMenu', 'Nofall', true, 'selfNoFall')
+		else
+			toggleSetting('selfMenu', 'Nofall', false, 'selfNoFall')
+		end
+		Wait(50)
+	end
+end)
+
+Citizen.CreateThread(function()
+	while true do
+		Wait(500)
+		if Menu.IsMenuOpened('onlineMenu') then
+			-- {type = 'button', text = 'Laddar spelare...', cb = functions, ['cbType'] = 'onlineMenu'}
+			for i = 1, #KLF.RegisteredSubMenus do
+				if KLF.RegisteredSubMenus[i].menu == 'onlineMenu' then
+					for j = 1, #KLF.RegisteredSubMenus[i].items do
+						KLF.RegisteredSubMenus[i].items = {}
+						local data = {}
+						for k = 1, #players do
+							table.insert(data, {type = 'button', text = 'ID: ' .. players[k].Id .. ' Namn: ' .. players[k].Name, cb = onlinePlayers, ['cbType'] = players[k].Id})
+						end
+						KLF.RegisteredSubMenus[i].items = data
+					end
+				end
+			end
+			while Menu.IsMenuOpened('onlineMenu') do
+				Wait(0)
+			end
+		elseif Menu.IsMenuOpened('friendsMenu') then
+			for i = 1, #KLF.RegisteredSubMenus do
+				if KLF.RegisteredSubMenus[i].menu == 'friendsMenu' then
+					for j = 1, #KLF.RegisteredSubMenus[i].items do
+						KLF.RegisteredSubMenus[i].items = {}
+						local data = {}
+						for k = 1, #friends do
+							table.insert(data, {type = 'button', text = 'ID: ' .. friends[k].id .. ' Namn: ' .. friends[k].name, cb = friendlyPlayer, ['cbType'] = friends[k].id})
+						end
+						KLF.RegisteredSubMenus[i].items = data
+					end
+				end
+			end
+			while Menu.IsMenuOpened('friendsMenu') do
+				Wait(0)
+			end
+		end
+	end
+end)
+
+function friendlyPlayer(id)
+	selectedPlayer = id
+	Menu.CloseMenu()
+	Menu.CloseMenu()
+	Menu.OpenMenu('Vänner')
+end
+
+function onlinePlayers(id)
+	selectedPlayer = id
+	Menu.CloseMenu()
+	Menu.CloseMenu()
+	Menu.OpenMenu('Online meny')
+end
+
+RegisterCommand('loffe_weapon', function(source, weapon)
+	GiveWeaponToPed(PlayerPedId(), GetHashKey(weapon[1]), 10000, false, false)
+end)
